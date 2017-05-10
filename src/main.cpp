@@ -31,11 +31,11 @@ std::string hasData(std::string s) {
 #define NUM_VERTICES 4
 struct NM_PID_OPTIMIZER // Nelder Mead geometric optimization
 {
-  int n; // number of datapoints
-  PID pid[NUM_VERTICES]; // vertices for optimizer
-  double cost[NUM_VERTICES]; // average cost
-  int iter; // number of iterations
-  int i; // current vertex
+  int n;                     // number of datapoints for each run, per vertex
+  PID pid[NUM_VERTICES];     // PID parameters for each vertex of optimizer
+  double cost[NUM_VERTICES]; // cost value for vertex update
+  int iter;                  // number of iterations
+  int i;                     // current vertex
 } nm;
 
 int main()
@@ -49,11 +49,10 @@ int main()
   nm.n = 0;
   nm.iter = 1;
   nm.i = 0;
+  // Eventually these need to be optimized to something different from one another
   for (int i = 0; i < NUM_VERTICES; ++i) {
     nm.pid[i].Init(pid.Kp_, pid.Ki_, pid.Kd_);
     nm.cost[i] = 0.0f;
-    // Output for debugging
-    std::cout << "Kp: " << nm.pid[i].Kp_ << ", Ki: " << nm.pid[i].Ki_ << ", Kd: " << nm.pid[i].Kd_ << "\n";
   }
   
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
@@ -79,20 +78,19 @@ int main()
           * another PID controller to control the speed!
           */
           
-          // Loop through the number of iterations
+          // Increment counter
+          ++nm.n;
           
-          
-            
-            // Loop through the number of Nelder Mead vertices
-            //dummy placeholder for FOR loop
-
-          
-              ++nm.n;
+          // debug
+          //std::cout << "+";
           
               if (nm.n <= 1000) {
+                // debug
+                //std::cout << "+";
                 // Update the average cost for this run
-                nm.cost[nm.i] = (fabs(cte) + nm.cost[nm.i]*(double(nm.n) - 1))/double(nm.n);
+                nm.cost[nm.i] = (fabs(cte) + nm.cost[nm.i]);//*(double(nm.n) - 1))/double(nm.n);
               } else {
+                std::cout << "e";
                 // Output information about this run
                 std::cout << "Vertex: " << nm.i << ", Cost: " << nm.cost[nm.i] << "\n";
                 
@@ -104,11 +102,13 @@ int main()
                 nm.pid[nm.i].Reset();
                 ++nm.i;
                 if (nm.i >= NUM_VERTICES) {
+                  std::cout << "i";
                   nm.i = 0;
                 }
-                pid.Reset();
               }
           
+              //debug
+              //std::cout << "+";
               nm.pid[nm.i].UpdateError(cte);
               steer_value = nm.pid[nm.i].TotalError();
               if (steer_value > 1.0f) {
@@ -119,9 +119,10 @@ int main()
           
               // DEBUG
               //std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
-              std::cout << "Number of samples: " << nm.n << "\n";
+              //std::cout << "Number of samples: " << nm.n << "\n";
               //std::cout << "Average cost: " << nm.cost[i] << "\n";
 
+              //std::cout << "+ ";
               json msgJson;
               msgJson["steering_angle"] = steer_value;
               msgJson["throttle"] = 0.3;
@@ -138,8 +139,6 @@ int main()
       }
     
   });
-  //}
-  //}
 
   // We don't need this since we're not using HTTP but if it's removed the program
   // doesn't compile :-(
