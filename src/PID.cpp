@@ -53,9 +53,17 @@ double PID::TotalError() {
   double d_term = -Kd_*d_error_;
   
   control = p_term + i_term + d_term;
+  /*
   cout << "P: " << p_term << "\n";
   cout << "I: " << i_term << "\n";
   cout << "D: " << d_term << "\n";
-  return control;
+  */
+   return control;
 }
 
+void PID::Reset() {
+  // Clear error terms
+  p_error_ = 0.0f;
+  i_error_ = 0.0f;
+  d_error_ = 0.0f;
+}
