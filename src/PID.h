@@ -46,6 +46,11 @@ public:
    * Reset error terms
    */
   void Reset();
+  
+  /*
+   * Print out information about the PID for debugging and datalogging
+   */
+  void PrintPID();
 };
 
 #endif /* PID_H */
