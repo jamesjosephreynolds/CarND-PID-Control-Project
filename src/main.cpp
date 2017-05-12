@@ -28,15 +28,18 @@ std::string hasData(std::string s) {
   return "";
 }
 
+/* Be careful about segmentation violations */
 #define NUM_VERTICES 4
 struct NM_PID_OPTIMIZER // Nelder Mead geometric optimization
 {
   int n;                     // number of datapoints for each run, per vertex
-  PID pid[NUM_VERTICES];     // PID parameters for each vertex of optimizer
-  double cost[NUM_VERTICES]; // cost value for vertex update
+  PID *pPID = new PID[NUM_VERTICES];     // PID parameters for each vertex of optimizer
+  double *cost = new double[NUM_VERTICES]; // cost value for vertex update
   int iter;                  // number of iterations
   int i;                     // current vertex
-} nm;
+} 
+
+NM_PID_OPTIMIZER *nm = new NM_PID_OPTIMIZER;
 
 int main()
 {
@@ -46,13 +49,13 @@ int main()
   pid.Init(0.03, 0.0001, 0.03);
   
   // Initialize optimizer
-  nm.n = 0;
-  nm.iter = 1;
-  nm.i = 0;
+  nm->n = 0;
+  nm->iter = 1;
+  nm->i = 0;
   // Eventually these need to be optimized to something different from one another
   for (int i = 0; i < NUM_VERTICES; ++i) {
-    nm.pid[i].Init(pid.Kp_, pid.Ki_, pid.Kd_);
-    nm.cost[i] = 0.0f;
+    nm->pPID[i].Init(pid.Kp_, pid.Ki_, pid.Kd_);
+    nm->cost[i] = 0.0f;
   }
   
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
@@ -79,38 +82,38 @@ int main()
           */
           
           // Increment counter
-          ++nm.n;
+          ++nm->n;
           
           // debug
           //std::cout << "+";
           
-              if (nm.n <= 1000) {
+              if (nm->n <= 1000) {
                 // debug
                 //std::cout << "+";
                 // Update the average cost for this run
-                nm.cost[nm.i] = (fabs(cte) + nm.cost[nm.i]);//*(double(nm.n) - 1))/double(nm.n);
+                nm->cost[nm->i] = (fabs(cte) + nm->cost[nm->i]);//*(double(nm.n) - 1))/double(nm.n);
               } else {
                 std::cout << "e";
                 // Output information about this run
-                std::cout << "Vertex: " << nm.i << ", Cost: " << nm.cost[nm.i] << "\n";
+                std::cout << "Vertex: " << nm->i << ", Cost: " << nm->cost[nm->i] << "\n";
                 
                 // Restart the simulator
                 std::string reset_msg = "42[\"reset\",{}]";
                 ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
                 
-                nm.n = 0;
-                nm.pid[nm.i].Reset();
-                ++nm.i;
-                if (nm.i >= NUM_VERTICES) {
+                nm->n = 0;
+                nm->pPID[nm->i].Reset();
+                ++nm->i;
+                if (nm->i >= NUM_VERTICES) {
                   std::cout << "i";
-                  nm.i = 0;
+                  nm->i = 0;
                 }
               }
           
               //debug
               //std::cout << "+";
-              nm.pid[nm.i].UpdateError(cte);
-              steer_value = nm.pid[nm.i].TotalError();
+              nm->pPID[nm->i].UpdateError(cte);
+              steer_value = nm->pPID[nm->i].TotalError();
               if (steer_value > 1.0f) {
                 steer_value = 1.0f;
               } else if (steer_value < -1.0f) {
