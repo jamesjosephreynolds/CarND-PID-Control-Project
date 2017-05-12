@@ -24,7 +24,7 @@ NelderMead::~NelderMead() {}
   
 void NelderMead::clearCosts() {
   // reset the costs for vertices
-  for (int i = 0; i < NUM_VERTICES; ++i) {
+  for (int i = 0; i < vertex_cost.size(); ++i) {
     vertex_cost[i] = 0.0f;    
   }
 }
@@ -32,11 +32,12 @@ void NelderMead::clearCosts() {
 PID NelderMead::getCentroid() {
   // return the centroid PID value of the n-1 best vertices
   PID pid;
+  int N = vertex_cost.size();
     
   // find the worst vertex for centroid exclusion
   int worst = -1;
   double cost = -1.0f;
-  for (int i = 0; i < NUM_VERTICES; ++i) {
+  for (int i = 0; i < N; ++i) {
     if (vertex_cost[i] > cost) {
       worst = i;
       cost = vertex_cost[i];
@@ -48,16 +49,16 @@ PID NelderMead::getCentroid() {
   double Kd_tmp = 0.0f;
    
   // calculate the centroid
-  for (int i = 0; i < NUM_VERTICES; ++i) {
+  for (int i = 0; i < N; ++i) {
     if (i != worst) {
       Kp_tmp += vertex_pid[i].Kp_;
       Ki_tmp += vertex_pid[i].Ki_;
       Kd_tmp += vertex_pid[i].Kd_;
     }
   }
-  Kp_tmp /= double(NUM_VERTICES - 1);
-  Ki_tmp /= double(NUM_VERTICES - 1);
-  Kd_tmp /= double(NUM_VERTICES - 1);
+  Kp_tmp /= double(N - 1);
+  Ki_tmp /= double(N - 1);
+  Kd_tmp /= double(N - 1);
     
   // return the centroid
   pid.Init(Kp_tmp, Ki_tmp, Kd_tmp);
@@ -69,7 +70,7 @@ void NelderMead::printOptimizer() {
   // print optimizer parameters for debugging and datalogging
   std::cout << "Number of iterations: " << iter << std::endl;
   std::cout << "Number of datapoints to eval: " << n << std::endl;
-  for (int i = 0; i < NUM_VERTICES; ++ i) {
+  for (int i = 0; i < vertex_pid.size(); ++ i) {
   std::cout << "Vertex " << i << ":" << std::endl;
   vertex_pid[i].printPID();
   }
