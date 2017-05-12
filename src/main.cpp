@@ -33,13 +33,13 @@ std::string hasData(std::string s) {
 struct NM_PID_OPTIMIZER // Nelder Mead geometric optimization
 {
   int n;                     // number of datapoints for each run, per vertex
-  PID *pPID = new PID[NUM_VERTICES];     // PID parameters for each vertex of optimizer
-  double *cost = new double[NUM_VERTICES]; // cost value for vertex update
+  std::vector<PID> vertex_pid(NUM_VERTICES);     // PID parameters for each vertex of optimizer
+  std::vector<double> vertex_cost(NUM_VERTICES); // cost value for vertex update
   int iter;                  // number of iterations
   int i;                     // current vertex
 };
 
-NM_PID_OPTIMIZER *nm = new NM_PID_OPTIMIZER;
+NM_PID_OPTIMIZER nm;
 
 int main()
 {
@@ -52,37 +52,37 @@ int main()
   pid.Init(Kp_ini, Ki_ini, Kd_ini);
   
   // Initialize optimizer
-  nm->n = 0;
-  nm->iter = 1;
-  nm->i = 0;
+  nm.n = 0;
+  nm.iter = 1;
+  nm.i = 0;
   // Eventually these need to be optimized to something different from one another
   for (int i = 0; i < NUM_VERTICES; ++i) {
     switch(i) {
       case 1: {
-        nm->pPID[i].Init((Kp_ini*1.2), Ki_ini, Kd_ini); // larger P gain
+        nm.vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, Kd_ini); // larger P gain
         break;
       }
       case 2: {
-        nm->pPID[i].Init((Kp_ini*1.2), Ki_ini, (Kd_ini*1.2); // larger P gain and D gain
+        nm.vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, (Kd_ini*1.2); // larger P gain and D gain
         break;
       }
       case 3: {
-        nm->pPID[i].Init((Kp_ini*0.8), (Ki_ini*1.2), Kd_ini); // smaller P gain and larger I gain
+        nm.vertex_pid[i].Init((Kp_ini*0.8), (Ki_ini*1.2), Kd_ini); // smaller P gain and larger I gain
         break;
       }
       case 4: {
-        nm->pPID[i].Init((Kp_ini), (Ki_ini*1.2), (Kd_ini*0.8)); // smaller P gain and smaller I gain
+        nm.vertex_pid[i].Init((Kp_ini), (Ki_ini*1.2), (Kd_ini*0.8)); // smaller P gain and smaller I gain
         break;
       }
       default: std::cout << "Should not be here!" << std::endl;          
     }
-    nm->cost[i] = 0.0f;
+    nm.vertex_cost[i] = 0.0f;
   }
   
-  nm->pPID[0].printPID();
-  nm->pPID[1].printPID();    
-  nm->pPID[2].printPID();    
-  nm->pPID[3].printPID();    
+  nm.vertex_pid[0].printPID();
+  nm.vertex_pid[1].printPID();   
+  nm.vertex_pid[2].printPID();   
+  nm.vertex_pid[3].printPID();
                          
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -108,38 +108,38 @@ int main()
           */
           
           // Increment counter
-          ++nm->n;
+          ++nm.n;
           
           // debug
           //std::cout << "+";
           
-              if (nm->n <= 1000) {
+              if (nm.n <= 1000) {
                 // debug
                 //std::cout << "+";
                 // Update the average cost for this run
-                nm->cost[nm->i] = (fabs(cte) + nm->cost[nm->i]);//*(double(nm.n) - 1))/double(nm.n);
+                nm.vertex_cost[nm.i] = (fabs(cte) + nm.vertex_cost[nm.i]);//*(double(nm.n) - 1))/double(nm.n);
               } else {
                 std::cout << "e";
                 // Output information about this run
-                std::cout << "Vertex: " << nm->i << ", Cost: " << nm->cost[nm->i] << "\n";
+                std::cout << "Vertex: " << nm.i << ", Cost: " << nm.vertex_cost[nm.i] << "\n";
                 
                 // Restart the simulator
                 std::string reset_msg = "42[\"reset\",{}]";
                 ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
                 
-                nm->n = 0;
-                nm->pPID[nm->i].Reset();
-                ++nm->i;
-                if (nm->i >= NUM_VERTICES) {
+                nm.n = 0;
+                nm.vertex_pid[nm.i].Reset();
+                ++nm.i;
+                if (nm.i >= NUM_VERTICES) {
                   std::cout << "i";
-                  nm->i = 0;
+                  nm.i = 0;
                 }
               }
           
               //debug
               //std::cout << "+";
-              nm->pPID[nm->i].UpdateError(cte);
-              steer_value = nm->pPID[nm->i].TotalError();
+              nm.vertex_pid[nm.i].UpdateError(cte);
+              steer_value = nm.vertex_pid[nm.i].TotalError();
               if (steer_value > 1.0f) {
                 steer_value = 1.0f;
               } else if (steer_value < -1.0f) {
