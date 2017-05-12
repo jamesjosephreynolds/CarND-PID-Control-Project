@@ -28,21 +28,27 @@ std::string hasData(std::string s) {
   return "";
 }
 
-/* Be careful about segmentation violations */
+/*
+ * Nelder-Mead is a geometric optimizer that is derivative free
+ * Unlike Twiddle, Nelder-Mead modifies multiple parameters per run,
+ * and the update steps are a function of the "badness" of the worst
+ * performing PID parameters, relative to the remaining parameters.
+ * 
+ * For three parameters (Kp, Ki, Kd), four combinations of gains will
+ * form the vertices of a tetrahedron in R3, and one vertex will be
+ * moved based on evaluation of all four.
+ */
 #define NUM_VERTICES 4
 struct NM_PID_OPTIMIZER // Nelder Mead geometric optimization
 {
   int n;                     // number of datapoints for each run, per vertex
   std::vector<PID> vertex_pid(NUM_VERTICES);     // PID parameters for each vertex of optimizer
   std::vector<double> vertex_cost(NUM_VERTICES); // cost value for vertex update
-  int iter;                  // number of iterations
+  int iter;                  // number of iterations to optimize
   int i;                     // current vertex
-  double alpha; // alpha factor for reflection
-  double gamma; // gamma factor for expansion
-  double rho; // rho factor for contraction
-  double sigma; // sigma factor for shrink
+  double a, g, r, s; // alpha, gamma, rho, sigma coefficients
   
-  NM_PID_OPTIMIZER() : alpha(1), gamma(2), rho(0.5), sigma(0.5) { } // constructor
+  NM_PID_OPTIMIZER() : a(1), g(2), r(0.5), s(0.5) { } // constructor
   
   void clearCosts() {
     // reset the costs for vertices
@@ -57,7 +63,7 @@ struct NM_PID_OPTIMIZER // Nelder Mead geometric optimization
     
     // find the worst vertex for centroid exclusion
     int worst = -1;
-    double cost = -1;
+    double cost = -1.0f;
     for (int i = 0; i < NUM_VERTICES; ++i) {
       if (vertex_cost[i] > cost) {
         worst = i;
