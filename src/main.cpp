@@ -37,6 +37,67 @@ struct NM_PID_OPTIMIZER // Nelder Mead geometric optimization
   std::vector<double> vertex_cost(NUM_VERTICES); // cost value for vertex update
   int iter;                  // number of iterations
   int i;                     // current vertex
+  double alpha; // alpha factor for reflection
+  double gamma; // gamma factor for expansion
+  double rho; // rho factor for contraction
+  double sigma; // sigma factor for shrink
+  
+  NM_PID_OPTIMIZER() : alpha(1), gamma(2), rho(0.5), sigma(0.5) { } // constructor
+  
+  void clearCosts() {
+    // reset the costs for vertices
+    for (int i = 0; i < NUM_VERTICES; ++i) {
+      vertex_cost[i] = 0.0f;    
+    }
+  }
+  
+  PID getCentroid() {
+    // return the centroid PID value of the n-1 best vertices
+    PID pid;
+    
+    // find the worst vertex for centroid exclusion
+    int worst = -1;
+    double cost = -1;
+    for (int i = 0; i < NUM_VERTICES; ++i) {
+      if (vertex_cost[i] > cost) {
+        worst = i;
+        cost = vertex_cost[i];
+      }
+    }
+    
+    double Kp_tmp = 0.0f;
+    double Ki_tmp = 0.0f;
+    double Kd_tmp = 0.0f;
+    // calculate the centroid
+    for (int i = 0; i < NUM_VERTICES; ++i) {
+      if (i != worst) {
+        Kp_tmp += vertex_pid[i].Kp_;
+        Ki_tmp += vertex_pid[i].Ki_;
+        Kd_tmp += vertex_pid[i].Kd_;
+      }
+    }
+    Kp_tmp /= double(NUM_VERTICES - 1);
+    Ki_tmp /= double(NUM_VERTICES - 1);
+    Kd_tmp /= double(NUM_VERTICES - 1);
+    
+    // return the centroid
+    pid.Init(Kp_tmp, Ki_tmp, Kd_tmp);
+    pid.printPID();
+    return pid
+  }
+  
+  void printOptimizer() {
+    // print optimizer parameters for debugging and datalogging
+    std::cout << "Number of iterations: " << iter << std::endl;
+    std::cout << "Number of datapoints to eval: " << n << std::endl;
+    for (int i = 0; i < NUM_VERTICES; ++ i) {
+    std::cout << "Vertex " << i << ":" << std::endl;
+    vertex_pid[i].printPID();
+    }
+    std::cout << "Parameters (a, g, r, s): << {a, g, r, s} << std::endl;
+    
+  }
+  
 };
 
 NM_PID_OPTIMIZER nm;
@@ -79,10 +140,7 @@ int main()
     nm.vertex_cost[i] = 0.0f;
   }
   
-  nm.vertex_pid[0].printPID();
-  nm.vertex_pid[1].printPID();   
-  nm.vertex_pid[2].printPID();   
-  nm.vertex_pid[3].printPID();
+  nm.printOptimizer();
                          
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
