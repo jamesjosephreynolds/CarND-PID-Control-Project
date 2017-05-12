@@ -67,3 +67,10 @@ void PID::Reset() {
   i_error_ = 0.0f;
   d_error_ = 0.0f;
 }
+
+void PID::PrintPID() {
+  std::cout << "Kp: " << Kp_ << ", ";
+  std::cout << "Ki: " << Ki_ << ", ";
+  std::cout << "Kp: " << Kd_ << std::endl;
+
+}
