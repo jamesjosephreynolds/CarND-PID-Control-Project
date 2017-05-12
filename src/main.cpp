@@ -37,7 +37,7 @@ struct NM_PID_OPTIMIZER // Nelder Mead geometric optimization
   double *cost = new double[NUM_VERTICES]; // cost value for vertex update
   int iter;                  // number of iterations
   int i;                     // current vertex
-} 
+};
 
 NM_PID_OPTIMIZER *nm = new NM_PID_OPTIMIZER;
 
