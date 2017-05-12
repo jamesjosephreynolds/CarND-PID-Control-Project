@@ -74,5 +74,5 @@ void NelderMead::printOptimizer() {
   std::cout << "Vertex " << i << ":" << std::endl;
   vertex_pid[i].printPID();
   }
-  std::cout << "Parameters (a, g, r, s): << {a, g, r, s} << std::endl;
+  std::cout << "Parameters (a, g, r, s):" << {a, g, r, s} << std::endl;
 }
