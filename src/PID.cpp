@@ -20,6 +20,9 @@ void PID::Init(double Kp, double Ki, double Kd) {
   p_error_ = 0.0f;
   i_error_ = 0.0f;
   d_error_ = 0.0f;
+  
+  // Clear previous cross track error
+  cte_old_ = 0.0f;
 }
 
 void PID::UpdateError(double cte) {
