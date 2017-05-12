@@ -13,15 +13,15 @@ class NelderMead // Nelder Mead geometric optimization
     std::vector<PID> vertex_pid;     // PID parameters for each vertex of optimizer
     std::vector<double> vertex_cost; // cost value for vertex update
   
-    NelderMead() 
+    NelderMead();
       
-    ~NelderMead() 
+    virtual ~NelderMead(); 
   
-    void clearCosts()
+    void clearCosts();
   
-    PID getCentroid()
+    PID getCentroid();
   
-    void printOptimizer() 
+    void printOptimizer();
 };
 
 
