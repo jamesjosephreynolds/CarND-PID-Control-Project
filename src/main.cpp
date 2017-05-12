@@ -46,7 +46,10 @@ int main()
   uWS::Hub h;
 
   PID pid;
-  pid.Init(0.03, 0.0001, 0.03);
+  double Kp_ini = 0.03;
+  double Ki_ini = 0.0001;
+  double Kd_ini = 0.03;
+  pid.Init(Kp_ini, Ki_ini, Kd_ini);
   
   // Initialize optimizer
   nm->n = 0;
@@ -54,10 +57,33 @@ int main()
   nm->i = 0;
   // Eventually these need to be optimized to something different from one another
   for (int i = 0; i < NUM_VERTICES; ++i) {
-    nm->pPID[i].Init(pid.Kp_, pid.Ki_, pid.Kd_);
+    switch(i) {
+      case 1: {
+        nm->pPID[i].Init((Kp_ini*1.2), Ki_ini, Kd_ini); // larger P gain
+        break;
+      }
+      case 2: {
+        nm->pPID[i].Init((Kp_ini*1.2), Ki_ini, (Kd_ini*1.2); // larger P gain and D gain
+        break;
+      }
+      case 3: {
+        nm->pPID[i].Init((Kp_ini*0.8), (Ki_ini*1.2), Kd_ini); // smaller P gain and larger I gain
+        break;
+      }
+      case 4: {
+        nm->pPID[i].Init((Kp_ini), (Ki_ini*1.2), (Kd_ini*0.8)); // smaller P gain and smaller I gain
+        break;
+      }
+      default: std::cout << "Should not be here!" << std::endl;          
+    }
     nm->cost[i] = 0.0f;
   }
   
+  nm->pPID[0].printPID();
+  nm->pPID[1].printPID();    
+  nm->pPID[2].printPID();    
+  nm->pPID[3].printPID();    
+                         
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
