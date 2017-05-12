@@ -12,9 +12,23 @@ PID::~PID() {}
 
 void PID::Init(double Kp, double Ki, double Kd) {
   // Take gains as init arguments
-  Kp_ = Kp;
-  Ki_ = Ki;
-  Kd_ = Kd;
+  if (Kp > 0.0) {
+    Kp_ = Kp;
+  } else {
+    Kp_ = 0.000001;
+  }
+  
+  if (Ki > 0.0) {
+    Ki_ = Ki;
+  } else {
+    Ki_ = 0.0;
+  }
+  
+  if (Kd > 0.0) {
+    Kd_ = Kd;
+  } else {
+    Kd_ = 0.0;
+  }
   
   // Clear error terms
   p_error_ = 0.0f;
