@@ -9,6 +9,7 @@ public:
   double p_error_; //rename with _for clarity 
   double i_error_;
   double d_error_;
+  double cte_old_;
 
   /*
   * Coefficients
