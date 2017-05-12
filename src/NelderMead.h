@@ -1,6 +1,11 @@
 #ifndef NELDERMEAD_H
 #define NELDERMEAD_H
 
+#include <iostream>
+#include <vector>
+#include "PID.h"
+
+
 /*
  * Nelder-Mead is a geometric optimizer that is derivative free
  * Unlike Twiddle, Nelder-Mead modifies multiple parameters per run,
@@ -23,7 +28,7 @@ class NelderMead
     std::vector<PID> vertex_pid;     // PID parameters for each vertex of optimizer
     std::vector<double> vertex_cost; // cost value for vertex update
   
-    NelderMead();
+    NelderMead(int N, PID pid);
       
     virtual ~NelderMead(); 
   
@@ -31,7 +36,11 @@ class NelderMead
   
     PID getCentroid();
   
-    void printOptimizer();
+    int setNumPts(int N);
+  
+    int getNumPts();
+  
+    void PrintOptimizer();
 };
 
 

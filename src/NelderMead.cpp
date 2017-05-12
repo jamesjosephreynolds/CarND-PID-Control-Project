@@ -1,9 +1,6 @@
 #include "NelderMead.h"
-#include <iostream>
-using namespace std;
-#includ "PID.h"
 
-NelderMead::NelderMead(int N) { //constructor
+NelderMead::NelderMead(int N, PID pid) { //constructor
   // Vertex update coefficients
   c_a = 1.0;
   c_g = 2.0;
@@ -13,6 +10,11 @@ NelderMead::NelderMead(int N) { //constructor
   // Vertices and vertex costs
   vertex_pid.reserve(N);
   vertex_cost.reserve(N);
+  
+  for (int i = 0; i < N; ++i) {
+    vertex_pid.push_back(pid);
+    vertex_cost.push_back(0.0);
+  }
   
   // Optimization hyperparameters
   num_pts = 1000;
@@ -62,17 +64,32 @@ PID NelderMead::getCentroid() {
     
   // return the centroid
   pid.Init(Kp_tmp, Ki_tmp, Kd_tmp);
-  pid.printPID();
-  return pid
+  pid.PrintPID();
+  return pid;
 }
   
-void NelderMead::printOptimizer() {
+void NelderMead::PrintOptimizer() {
   // print optimizer parameters for debugging and datalogging
-  std::cout << "Number of iterations: " << iter << std::endl;
-  std::cout << "Number of datapoints to eval: " << n << std::endl;
+  std::cout << "Number of iterations: " << num_iter << std::endl;
+  std::cout << "Number of datapoints to eval: " << num_pts << std::endl;
   for (int i = 0; i < vertex_pid.size(); ++ i) {
-  std::cout << "Vertex " << i << ":" << std::endl;
-  vertex_pid[i].printPID();
+    std::cout << "Vertex " << i << ":" << std::endl;
+    vertex_pid[i].PrintPID();
   }
-  std::cout << "Parameters (a, g, r, s):" << {a, g, r, s} << std::endl;
+  std::cout << "Parameters (a, g, r, s): " << c_a << ", " << c_g << ", " << c_r << ", " << c_s << std::endl;
+}
+
+int NelderMead::setNumPts(int N) {
+  if (N > 1) {
+    num_pts = N;
+    return 1;
+  } else {
+    num_pts = 1;
+    return 0;
+  }
+  
+}
+
+int NelderMead::getNumPts() {
+  return num_pts;
 }

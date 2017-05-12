@@ -40,38 +40,41 @@ std::string hasData(std::string s) {
  * moved based on evaluation of all four.
  */
 const int kNumVertices = 4; // three tunable parameters necessitates four vertices (N+1)
-NelderMead nm(kNumVertices);
+
 
 int main()
 {
   uWS::Hub h;
 
   PID pid;
+
   double Kp_ini = 0.03;
   double Ki_ini = 0.0001;
   double Kd_ini = 0.03;
   pid.Init(Kp_ini, Ki_ini, Kd_ini);
+  NelderMead nm(kNumVertices, pid);
+  pid.PrintPID();
   
   // Initialize optimizer
-  nm.n = 0;
-  nm.iter = 1;
-  nm.i = 0;
+  nm.num_pts = 0;
+  nm.num_iter = 1;
+  nm.cur_vertex = 0;
   // Eventually these need to be optimized to something different from one another
-  for (int i = 0; i < NUM_VERTICES; ++i) {
+  for (int i = 0; i < kNumVertices; ++i) {
     switch(i) {
-      case 1: {
+      case 0: {
         nm.vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, Kd_ini); // larger P gain
         break;
       }
-      case 2: {
-        nm.vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, (Kd_ini*1.2); // larger P gain and D gain
+      case 1: {
+        nm.vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, (Kd_ini*1.2)); // larger P gain and D gain
         break;
       }
-      case 3: {
+      case 2: {
         nm.vertex_pid[i].Init((Kp_ini*0.8), (Ki_ini*1.2), Kd_ini); // smaller P gain and larger I gain
         break;
       }
-      case 4: {
+      case 3: {
         nm.vertex_pid[i].Init((Kp_ini), (Ki_ini*1.2), (Kd_ini*0.8)); // smaller P gain and smaller I gain
         break;
       }
@@ -80,7 +83,7 @@ int main()
     nm.vertex_cost[i] = 0.0f;
   }
   
-  nm.printOptimizer();
+  nm.PrintOptimizer();
                          
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -106,38 +109,38 @@ int main()
           */
           
           // Increment counter
-          ++nm.n;
+          int N = nm.getNumPts();
           
           // debug
           //std::cout << "+";
           
-              if (nm.n <= 1000) {
+              if (N <= 1000) {
                 // debug
                 //std::cout << "+";
                 // Update the average cost for this run
-                nm.vertex_cost[nm.i] = (fabs(cte) + nm.vertex_cost[nm.i]);//*(double(nm.n) - 1))/double(nm.n);
-              } else {
-                std::cout << "e";
+           //     nm.vertex_cost[nm.cur_vertex] = (fabs(cte) + nm.vertex_cost[nm.cur_vertex]);//*(double(nm.n) - 1))/double(nm.n);
+           //   } else {
+           //     std::cout << "e";
                 // Output information about this run
-                std::cout << "Vertex: " << nm.i << ", Cost: " << nm.vertex_cost[nm.i] << "\n";
+           //     std::cout << "Vertex: " << nm.cur_vertex << ", Cost: " << nm.vertex_cost[nm.cur_vertex] << "\n";
                 
                 // Restart the simulator
                 std::string reset_msg = "42[\"reset\",{}]";
                 ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
                 
-                nm.n = 0;
-                nm.vertex_pid[nm.i].Reset();
-                ++nm.i;
-                if (nm.i >= NUM_VERTICES) {
-                  std::cout << "i";
-                  nm.i = 0;
-                }
-              }
+           //     nm.num_pts = 0;
+          ///      nm.vertex_pid[nm.cur_vertex].Reset();
+            //    ++nm.cur_vertex;
+       //         if (nm.cur_vertex >= kNumVertices) {
+         //         std::cout << "i";
+        //          nm.cur_vertex = 0;
+        //        }
+       //       }
           
               //debug
               //std::cout << "+";
-              nm.vertex_pid[nm.i].UpdateError(cte);
-              steer_value = nm.vertex_pid[nm.i].TotalError();
+         //     nm.vertex_pid[nm.cur_vertex].UpdateError(cte);
+         //     steer_value = nm.vertex_pid[nm.cur_vertex].TotalError();
               if (steer_value > 1.0f) {
                 steer_value = 1.0f;
               } else if (steer_value < -1.0f) {
