@@ -40,6 +40,10 @@ class NelderMead
   
     int getNumPts();
   
+    int setCost(int N, double cost);
+  
+    double getCost(int N);
+  
     void PrintOptimizer();
 };
 

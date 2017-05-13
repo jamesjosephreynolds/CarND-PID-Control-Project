@@ -93,3 +93,20 @@ int NelderMead::setNumPts(int N) {
 int NelderMead::getNumPts() {
   return num_pts;
 }
+
+int NelderMead::setCost(int N, double cost) {
+  if (N < vertex_cost.size()) {
+    vertex_cost[N] = cost;
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+double NelderMead::getCost(int N) {
+  if (N < vertex_cost.size()) {
+    return vertex_cost[N];
+  } else {
+    return 0.0f;
+  }
+}

@@ -85,7 +85,7 @@ int main()
   
   nm.PrintOptimizer();
                          
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&pid, &nm](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -109,7 +109,8 @@ int main()
           */
           
           // Increment counter
-          int N = nm.getNumPts();
+          int N = nm.getNumPts()+1;
+          nm.setNumPts(N);
           
           // debug
           //std::cout << "+";
@@ -118,29 +119,29 @@ int main()
                 // debug
                 //std::cout << "+";
                 // Update the average cost for this run
-           //     nm.vertex_cost[nm.cur_vertex] = (fabs(cte) + nm.vertex_cost[nm.cur_vertex]);//*(double(nm.n) - 1))/double(nm.n);
-           //   } else {
+                nm.setCost(0, (fabs(cte) + nm.getCost(0)));//*(double(nm.n) - 1))/double(nm.n);
+              } else {
            //     std::cout << "e";
                 // Output information about this run
-           //     std::cout << "Vertex: " << nm.cur_vertex << ", Cost: " << nm.vertex_cost[nm.cur_vertex] << "\n";
+                std::cout << "Vertex: " << 0 << ", Cost: " << nm.getCost(0) << "\n";
                 
                 // Restart the simulator
                 std::string reset_msg = "42[\"reset\",{}]";
                 ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
                 
-           //     nm.num_pts = 0;
-          ///      nm.vertex_pid[nm.cur_vertex].Reset();
-            //    ++nm.cur_vertex;
-       //         if (nm.cur_vertex >= kNumVertices) {
-         //         std::cout << "i";
-        //          nm.cur_vertex = 0;
-        //        }
-       //       }
+                nm.setNumPts(0);
+                nm.vertex_pid[0].Reset();
+                //++nm.cur_vertex;
+                //if (nm.cur_vertex >= kNumVertices) {
+                  //std::cout << "i";
+                  //nm.cur_vertex = 0;
+                //}
+              }
           
               //debug
               //std::cout << "+";
-         //     nm.vertex_pid[nm.cur_vertex].UpdateError(cte);
-         //     steer_value = nm.vertex_pid[nm.cur_vertex].TotalError();
+              nm.vertex_pid[0].UpdateError(cte);
+              steer_value = nm.vertex_pid[0].TotalError();
               if (steer_value > 1.0f) {
                 steer_value = 1.0f;
               } else if (steer_value < -1.0f) {
