@@ -45,6 +45,12 @@ class NelderMead
     double getCost(int N);
   
     void PrintOptimizer();
+  
+    int pidReset(int N);
+  
+    int pidUpdate(int N, double cte);
+  
+    double getControl(int N);
 };
 
 

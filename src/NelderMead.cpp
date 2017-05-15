@@ -110,3 +110,29 @@ double NelderMead::getCost(int N) {
     return 0.0f;
   }
 }
+
+int NelderMead::pidReset(int N) {
+  if (N < vertex_pid.size()) {
+    vertex_pid[N].Reset();
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+int NelderMead::pidUpdate(int N, double cte) {
+  if (N < vertex_pid.size()) {
+    vertex_pid[N].UpdateError(cte);
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+double NelderMead::getControl(int N) {
+  if (N < vertex_pid.size()) {
+    return vertex_pid[N].TotalError();
+  } else {
+    return 0.0f;
+  }
+}

@@ -41,51 +41,52 @@ std::string hasData(std::string s) {
  */
 const int kNumVertices = 4; // three tunable parameters necessitates four vertices (N+1)
 
+PID pid;
+NelderMead *nm = new NelderMead(kNumVertices, pid);
 
 int main()
 {
   uWS::Hub h;
-
-  PID pid;
-
-  double Kp_ini = 0.03;
-  double Ki_ini = 0.0001;
+  double Kp_ini = 0.04;
+  double Ki_ini = 0.00001;
   double Kd_ini = 0.03;
   pid.Init(Kp_ini, Ki_ini, Kd_ini);
-  NelderMead nm(kNumVertices, pid);
+  NelderMead *nm = new NelderMead(kNumVertices, pid);
+  
   pid.PrintPID();
   
   // Initialize optimizer
-  nm.num_pts = 0;
-  nm.num_iter = 1;
-  nm.cur_vertex = 0;
+  nm->num_pts = 0;
+  nm->num_iter = 1;
+  nm->cur_vertex = 0;
   // Eventually these need to be optimized to something different from one another
   for (int i = 0; i < kNumVertices; ++i) {
     switch(i) {
       case 0: {
-        nm.vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, Kd_ini); // larger P gain
+        nm->vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, Kd_ini); // larger P gain
         break;
       }
       case 1: {
-        nm.vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, (Kd_ini*1.2)); // larger P gain and D gain
+        nm->vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, (Kd_ini*1.2)); // larger P gain and D gain
         break;
       }
       case 2: {
-        nm.vertex_pid[i].Init((Kp_ini*0.8), (Ki_ini*1.2), Kd_ini); // smaller P gain and larger I gain
+        nm->vertex_pid[i].Init((Kp_ini*0.8), (Ki_ini*1.2), Kd_ini); // smaller P gain and larger I gain
         break;
       }
       case 3: {
-        nm.vertex_pid[i].Init((Kp_ini), (Ki_ini*1.2), (Kd_ini*0.8)); // smaller P gain and smaller I gain
+        nm->vertex_pid[i].Init((Kp_ini), (Ki_ini*1.2), (Kd_ini*0.8)); // smaller P gain and smaller I gain
         break;
       }
       default: std::cout << "Should not be here!" << std::endl;          
     }
-    nm.vertex_cost[i] = 0.0f;
+    nm->vertex_cost[i] = 0.0f;
   }
   
-  nm.PrintOptimizer();
+  nm->PrintOptimizer();
                          
-  h.onMessage([&pid, &nm](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  //h.onMessage([&pid, &nm](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -109,8 +110,8 @@ int main()
           */
           
           // Increment counter
-          int N = nm.getNumPts()+1;
-          nm.setNumPts(N);
+          int N = 0;//nm->getNumPts()+1;
+          //nm->setNumPts(N);
           
           // debug
           //std::cout << "+";
@@ -119,18 +120,18 @@ int main()
                 // debug
                 //std::cout << "+";
                 // Update the average cost for this run
-                nm.setCost(0, (fabs(cte) + nm.getCost(0)));//*(double(nm.n) - 1))/double(nm.n);
+                //nm->setCost(0, (fabs(cte) + nm->getCost(0)));//*(double(nm.n) - 1))/double(nm.n);
               } else {
            //     std::cout << "e";
                 // Output information about this run
-                std::cout << "Vertex: " << 0 << ", Cost: " << nm.getCost(0) << "\n";
+                //std::cout << "Vertex: " << 0 << ", Cost: " << nm->getCost(0) << "\n";
                 
                 // Restart the simulator
                 std::string reset_msg = "42[\"reset\",{}]";
                 ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
                 
-                nm.setNumPts(0);
-                nm.vertex_pid[0].Reset();
+                //nm->setNumPts(0);
+                //nm->pidReset(0);
                 //++nm.cur_vertex;
                 //if (nm.cur_vertex >= kNumVertices) {
                   //std::cout << "i";
@@ -140,8 +141,8 @@ int main()
           
               //debug
               //std::cout << "+";
-              nm.vertex_pid[0].UpdateError(cte);
-              steer_value = nm.vertex_pid[0].TotalError();
+              pid.UpdateError(cte);
+              steer_value = pid.TotalError();
               if (steer_value > 1.0f) {
                 steer_value = 1.0f;
               } else if (steer_value < -1.0f) {
@@ -156,7 +157,7 @@ int main()
               //std::cout << "+ ";
               json msgJson;
               msgJson["steering_angle"] = steer_value;
-              msgJson["throttle"] = 0.3;
+              msgJson["throttle"] = 0.15;
               auto msg = "42[\"steer\"," + msgJson.dump() + "]";
               //std::cout << msg << std::endl;
               ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
