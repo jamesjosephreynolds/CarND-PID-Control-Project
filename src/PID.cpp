@@ -49,12 +49,12 @@ void PID::UpdateError(double cte) {
   i_error_ += cte;
   
   // Anti-windup
-  double i_term_max = 0.2;
+  /*double i_term_max = 0.2;
   if (Ki_*i_error_ > i_term_max) {
     i_error_ = i_term_max / Ki_;
   } else if (Ki_*i_error_ < -i_term_max) {
     i_error_ = -i_term_max / Ki_;
-  }
+  }*/
   
   // Derivative (assume t = 1 sec)
   double d_error_old = d_error_;

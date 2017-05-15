@@ -33,14 +33,28 @@ int main()
   uWS::Hub h;
 
   PID pid;
-  pid.Init(0.1, 0.0000, 0.2);
+  pid.Init(0.1, 0.000001, 0.02);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     static int N = 0;
+    static double cost = 0.0;
+    
+    enum Twiddle_Param {
+      KP = 0,
+      KI = 1,
+      KD = 2
+    };
+    
+    enum Twiddle_Step {
+      STEP_FWD,
+      STEP_BACK
+    };
+    
     std::cout << N << std::endl;
+    
     if (length && length > 2 && data[0] == '4' && data[1] == '2')
     {
       auto s = hasData(std::string(data).substr(0, length));
@@ -68,17 +82,76 @@ int main()
             steer_value = -1.0f;
           }
           
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.2;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+        
+          ++N;
+          
+          cost += fabs(cte);
+          
+          
+          if (N > 2500) {
+            std::cout << "Twiddle" << std::endl;
+            // static Twiddle parameters
+            static Twiddle_Param twiddle_param = KP; // 0 = Kp, 1 = Ki, 2 = Kd
+            static Twiddle_Step twiddle_step = STEP_FWD;
+            static double twiddle_delta[3] = {0.01, 0.0000001, 0.002};
+            double Kp_t, Ki_t, Kd_t;
+            
+            switch (twiddle_param) {
+              case KP: {
+                std::cout << "Modify P" << std::endl;
+                
+                switch (twiddle_step) {
+                  case STEP_FWD: {
+                    Kp_t = pid.Kp_ + twiddle_delta[KP];
+                    Ki_t = pid.Ki_;
+                    Kd_t = pid.Kd_;
+
+                    break;
+                  }
+                  default: {
+                    std::cout << "Whoops!" << std::endl;
+                    break;
+                  }
+                }
+                
+                
+                break;
+              }
+              case KI: {
+                std::cout << "Modify I" << std::endl;
+                break;
+              }
+              case KD: {
+                std::cout << "Modify D" << std::endl;
+                break;
+              }
+              default: {
+                std::cout << "Whoops!" << std::endl;
+                break;
+              }
+            }
+            
+            
+            pid.Init(Kp_t, Ki_t, Kd_t);
+            N = 0;
+            std::cout << "Cost: " << cost << std::endl;
+            cost = 0.0;
+            std::cout << "New: " << Kp_t << ", " << Ki_t << ", " << Kd_t << std::endl;
+            
+          }
+        
         }
-        ++N;
+
+        
+        
       } else {
         // Manual driving
         std::string msg = "42[\"manual\",{}]";
