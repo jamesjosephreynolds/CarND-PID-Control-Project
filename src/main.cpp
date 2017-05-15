@@ -3,7 +3,6 @@
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
-#include "NelderMead.h" // parameter optimizer
 
 // for convenience
 using json = nlohmann::json;
@@ -29,67 +28,19 @@ std::string hasData(std::string s) {
   return "";
 }
 
-/*
- * Nelder-Mead is a geometric optimizer that is derivative free
- * Unlike Twiddle, Nelder-Mead modifies multiple parameters per run,
- * and the update steps are a function of the "badness" of the worst
- * performing PID parameters, relative to the remaining parameters.
- * 
- * For three parameters (Kp, Ki, Kd), four combinations of gains will
- * form the vertices of a tetrahedron in R3, and one vertex will be
- * moved based on evaluation of all four.
- */
-const int kNumVertices = 4; // three tunable parameters necessitates four vertices (N+1)
-
-PID pid;
-NelderMead *nm = new NelderMead(kNumVertices, pid);
-
 int main()
 {
   uWS::Hub h;
-  double Kp_ini = 0.04;
-  double Ki_ini = 0.00001;
-  double Kd_ini = 0.03;
-  pid.Init(Kp_ini, Ki_ini, Kd_ini);
-  NelderMead *nm = new NelderMead(kNumVertices, pid);
-  
-  pid.PrintPID();
-  
-  // Initialize optimizer
-  nm->num_pts = 0;
-  nm->num_iter = 1;
-  nm->cur_vertex = 0;
-  // Eventually these need to be optimized to something different from one another
-  for (int i = 0; i < kNumVertices; ++i) {
-    switch(i) {
-      case 0: {
-        nm->vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, Kd_ini); // larger P gain
-        break;
-      }
-      case 1: {
-        nm->vertex_pid[i].Init((Kp_ini*1.2), Ki_ini, (Kd_ini*1.2)); // larger P gain and D gain
-        break;
-      }
-      case 2: {
-        nm->vertex_pid[i].Init((Kp_ini*0.8), (Ki_ini*1.2), Kd_ini); // smaller P gain and larger I gain
-        break;
-      }
-      case 3: {
-        nm->vertex_pid[i].Init((Kp_ini), (Ki_ini*1.2), (Kd_ini*0.8)); // smaller P gain and smaller I gain
-        break;
-      }
-      default: std::cout << "Should not be here!" << std::endl;          
-    }
-    nm->vertex_cost[i] = 0.0f;
-  }
-  
-  nm->PrintOptimizer();
-                         
-  //h.onMessage([&pid, &nm](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
-  h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+
+  PID pid;
+  pid.Init(0.1, 0.0000, 0.2);
+
+  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
+    static int N = 0;
+    std::cout << N << std::endl;
     if (length && length > 2 && data[0] == '4' && data[1] == '2')
     {
       auto s = hasData(std::string(data).substr(0, length));
@@ -109,67 +60,31 @@ int main()
           * another PID controller to control the speed!
           */
           
-          // Increment counter
-          int N = 0;//nm->getNumPts()+1;
-          //nm->setNumPts(N);
-          
-          // debug
-          //std::cout << "+";
-          
-              if (N <= 1000) {
-                // debug
-                //std::cout << "+";
-                // Update the average cost for this run
-                //nm->setCost(0, (fabs(cte) + nm->getCost(0)));//*(double(nm.n) - 1))/double(nm.n);
-              } else {
-           //     std::cout << "e";
-                // Output information about this run
-                //std::cout << "Vertex: " << 0 << ", Cost: " << nm->getCost(0) << "\n";
-                
-                // Restart the simulator
-                std::string reset_msg = "42[\"reset\",{}]";
-                ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
-                
-                //nm->setNumPts(0);
-                //nm->pidReset(0);
-                //++nm.cur_vertex;
-                //if (nm.cur_vertex >= kNumVertices) {
-                  //std::cout << "i";
-                  //nm.cur_vertex = 0;
-                //}
-              }
-          
-              //debug
-              //std::cout << "+";
-              pid.UpdateError(cte);
-              steer_value = pid.TotalError();
-              if (steer_value > 1.0f) {
-                steer_value = 1.0f;
-              } else if (steer_value < -1.0f) {
-                steer_value = -1.0f;
-              }
-          
-              // DEBUG
-              //std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
-              //std::cout << "Number of samples: " << nm.n << "\n";
-              //std::cout << "Average cost: " << nm.cost[i] << "\n";
-
-              //std::cout << "+ ";
-              json msgJson;
-              msgJson["steering_angle"] = steer_value;
-              msgJson["throttle"] = 0.15;
-              auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-              //std::cout << msg << std::endl;
-              ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          
+          pid.UpdateError(cte);
+          steer_value = pid.TotalError();
+          if (steer_value > 1.0f) {
+            steer_value = 1.0f;
+          } else if (steer_value < -1.0f) {
+            steer_value = -1.0f;
           }
+          
+          // DEBUG
+          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+
+          json msgJson;
+          msgJson["steering_angle"] = steer_value;
+          msgJson["throttle"] = 0.2;
+          auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+          std::cout << msg << std::endl;
+          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
+        ++N;
       } else {
         // Manual driving
         std::string msg = "42[\"manual\",{}]";
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
-    
+    }
   });
 
   // We don't need this since we're not using HTTP but if it's removed the program
