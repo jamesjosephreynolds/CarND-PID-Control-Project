@@ -33,27 +33,14 @@ int main()
   uWS::Hub h;
 
   PID pid;
-  pid.Init(0.1, 0.000001, 0.02);
-
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  PID pid_sp;
+  pid.Init(0.5, 0.00005, 0.0005, true); //(0.25, 0.00005, 0.0005, false)
+  pid_sp.Init(0.1, 0.0001, 0.0, false);
+  
+  h.onMessage([&pid, &pid_sp](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
-    static int N = 0;
-    static double cost = 0.0;
-    
-    enum Twiddle_Param {
-      KP = 0,
-      KI = 1,
-      KD = 2
-    };
-    
-    enum Twiddle_Step {
-      STEP_FWD,
-      STEP_BACK
-    };
-    
-    std::cout << N << std::endl;
     
     if (length && length > 2 && data[0] == '4' && data[1] == '2')
     {
@@ -82,75 +69,43 @@ int main()
             steer_value = -1.0f;
           }
           
-          
+          double cte_lim = 1.5;
+          double steer_lim = 0.5;
+          double tgt_spd;
+          if (fabs(cte) > cte_lim) {
+            tgt_spd = 10;
+          } else if (fabs(steer_value) > steer_lim) {
+            tgt_spd = 10;
+          } else {
+            tgt_spd = 50*fabs((fabs(cte)-cte_lim))+10;
+          }
+          pid_sp.UpdateError(-(tgt_spd-speed));
+          double feedforward = tgt_spd/10;
+          double throttle_value = pid_sp.TotalError();
+          if (throttle_value > 1.0f) {
+            throttle_value = 1.0f;
+          } else if (steer_value < -1.0f) {
+            throttle_value = -1.0f;
+          }
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.2;
+          msgJson["throttle"] = throttle_value;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-        
-          ++N;
           
-          cost += fabs(cte);
+          bool reset = pid.Twiddle(cte, speed);
           
-          
-          if (N > 2500) {
-            std::cout << "Twiddle" << std::endl;
-            // static Twiddle parameters
-            static Twiddle_Param twiddle_param = KP; // 0 = Kp, 1 = Ki, 2 = Kd
-            static Twiddle_Step twiddle_step = STEP_FWD;
-            static double twiddle_delta[3] = {0.01, 0.0000001, 0.002};
-            double Kp_t, Ki_t, Kd_t;
-            
-            switch (twiddle_param) {
-              case KP: {
-                std::cout << "Modify P" << std::endl;
-                
-                switch (twiddle_step) {
-                  case STEP_FWD: {
-                    Kp_t = pid.Kp_ + twiddle_delta[KP];
-                    Ki_t = pid.Ki_;
-                    Kd_t = pid.Kd_;
-
-                    break;
-                  }
-                  default: {
-                    std::cout << "Whoops!" << std::endl;
-                    break;
-                  }
-                }
-                
-                
-                break;
-              }
-              case KI: {
-                std::cout << "Modify I" << std::endl;
-                break;
-              }
-              case KD: {
-                std::cout << "Modify D" << std::endl;
-                break;
-              }
-              default: {
-                std::cout << "Whoops!" << std::endl;
-                break;
-              }
-            }
-            
-            
-            pid.Init(Kp_t, Ki_t, Kd_t);
-            N = 0;
-            std::cout << "Cost: " << cost << std::endl;
-            cost = 0.0;
-            std::cout << "New: " << Kp_t << ", " << Ki_t << ", " << Kd_t << std::endl;
-            
+          if (reset) {
+            // restart simulator
+            std::string reset_msg = "42[\"reset\",{}]";
+            ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
+            pid.Reset();
+            pid_sp.Reset();
           }
-        
+          
         }
-
-        
         
       } else {
         // Manual driving
