@@ -32,10 +32,15 @@ int main()
 {
   uWS::Hub h;
 
+  /*
+   * Two different PID loops are used:
+   * pid controls the steering angle using CTE as the feedback error
+   * pid_sp controls the throttle using the speed minus the target speed as the feedback error
+   */
   PID pid;
   PID pid_sp;
-  pid.Init(0.081, 0.0005, 2, true); //(0.081, 0.0005, 26.518, false)
-  pid_sp.Init(0.1, 0.0001, 0.0, false);
+  pid.Init(0.081, 0.0005, 2, true);     // Twiddle the steering controller
+  pid_sp.Init(0.1, 0.0001, 0.0, false); // do not Twiddle the speed controller
   
   h.onMessage([&pid, &pid_sp](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -54,13 +59,8 @@ int main()
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
-          /*
-          * TODO: Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
-          */
           
+          // Use pid to calculate the steering angle
           pid.UpdateError(cte);
           steer_value = pid.TotalError();
           if (steer_value > 1.0f) {
@@ -69,22 +69,30 @@ int main()
             steer_value = -1.0f;
           }
           
+          // Use CTE and angle to calculate the target speed
           double cte_lim = 1.5;
           double steer_lim = 0.5;
           double tgt_spd;
           if (fabs(cte) > cte_lim) {
+            // If CTE is too large, limit target speed to min value
             tgt_spd = 10;
           } else if (fabs(steer_value) > steer_lim) {
+            // If steering angle is too large, limit target speed to min value
             tgt_spd = 10;
           } else {
-            tgt_spd = 30*fabs((fabs(cte)-cte_lim))+10;
+            // Target speed is a linearly decreasing function of CTE absolute value
+            // As CTE increases, the target speed decreases
+            tgt_spd = 30*fabs((fabs(cte) - cte_lim)) + 10;
           }
+          
+          // Use pid_sp to calculate the throttle value
           pid_sp.UpdateError(-(tgt_spd-speed));
-          double feedforward = tgt_spd/10;
-          double throttle_value = pid_sp.TotalError();
+          double feedforward = tgt_spd/10; // Feedforward throttle term
+          double throttle_value = feedforward + pid_sp.TotalError();
           if (throttle_value > 0.5f) {
             throttle_value = 0.5f;
           } else if (steer_value < -0.0f) {
+            // Inhibit excessive braking
             throttle_value = -0.0f;
           }
 
@@ -95,12 +103,15 @@ int main()
           //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
           
+          // Check is Twiddle is complete with the current run
           bool reset = pid.Twiddle(cte, speed, angle);
           
-          if (reset) {
-            // restart simulator
+          if (reset) { // Twiddle is ready to try new parameters
+            // Restart simulator
             std::string reset_msg = "42[\"reset\",{}]";
             ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
+            
+            // Reset error terms (especially important for integrals)
             pid.Reset();
             pid_sp.Reset();
           }
