@@ -44,7 +44,7 @@ double feedforward = tgt_spd/10; // Feedforward throttle term
 double throttle_value = feedforward + pid_sp.TotalError();
 if (throttle_value > 0.5f) {
   throttle_value = 0.5f;
-} else if (steer_value < -0.2f) {
+} else if (throttle_value < -0.2f) {
   // Inhibit excessive braking
   throttle_value = -0.2f;
 }
