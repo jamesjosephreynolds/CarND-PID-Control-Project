@@ -1,6 +1,9 @@
 # PID Controls for Steering Angle and Vehicle Speed Project
 This project is originally forked from https://github.com/udacity/CarND-PID-Control-Project.  This repository includes starter code, that is used herein.
 
+## Important Note
+I am running the simulator on MacOS, with .
+
 ## Controller Structure
 For this project I implemented two PID controllers: one for the steering angle and one for the vehicle speed.  They are both instances of the class `PID`.
 
@@ -143,4 +146,14 @@ if (speed < 2){
   }
 }
 ```
+
+## Performance
+The video below shows my solution in action.
+
+## Notes
+My initial approach was to implement the Nelder Mead algorithm for parameter optimization.  This is a technique I've used successfully for other applications.  However, when I implemented this in object-oriented manner, I struggled to root out some segmentation faults.  This was likely due to my implementation and an associated array of structures, but I was unable to solve it.  Nelder-Mead does not lend itself well to functional-style code, so I abandoned this approach and instead implemented Twiddle.
+
+In general, even with much tuning, I was not able to successfully get the vehicle to drive "well".  I think this is mainly due to two things:
+1. Controlling to the `CTE` at time `t` is not a valid control approach.  The idea instead should be to either control to a trajectory that will reach `CTE = 0.0` over some finite time horizon, or to control the trajectory of the vehicle.  No driver will immediately try to center a vehicle unless avoiding a collision, otherwise, the driver will simply adjust the angle to allow the car to "fall" into the center of the lane again.
+2. PID control may not be well suited to this type of system, or the control loop rate may be too small.  Based on my observing the simulator, there is a significant amount delay between when the vehicle crosses the center line and when the steering happens.  This may be due to where in the vehicle is the reference point (is it at the front of the car or the center of mass), or because of the system dynamics (time delay between turning the steering wheel and tires turning, time delay between turning tires, and vehicle turning, etc)
 
