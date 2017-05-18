@@ -149,7 +149,7 @@ if (speed < 2){
 
 ## Performance
 The video below shows my solution in action.
-[![Whoops, there should be a picture here!](https://img.youtube.com/vi/oZKl0CHfHc/0.jpg)](https://youtu.be/oZKl0-CHfHc)
+[![Whoops, there should be a picture here!](https://img.youtube.com/vi/oZKl0-CHfHc/0.jpg)](https://youtu.be/oZKl0-CHfHc)
 *Video recording for final parameters*
  
 ## Reflections
