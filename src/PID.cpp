@@ -71,11 +71,13 @@ void PID::UpdateError(double cte) {
   }
   
   // Integral
-  i_error += cte;
+  if (fabs(cte) > 0.1) {
+    i_error += cte;
+  }
   
   // Anti-windup for integral too large
-  double i_term_max = 0.1;
-  if (N > N_min) {
+  double i_term_max = 0.2;
+  if ((N > N_min) || is_twiddled) {
     if ((Ki*i_error) > i_term_max) {
       i_error = i_term_max / Ki;
     } else if ((Ki*i_error) < -i_term_max) {
@@ -90,7 +92,7 @@ void PID::UpdateError(double cte) {
   
   // Low pass filter for derivative smoothing
   // y(t) = k*y(t-1) + (1-k)*x(t)
-  d_error = 0.2*d_error + 0.8*(cte - d_error_old);
+  d_error = 0.25*d_error + 0.75*(cte - d_error_old);
   
 }
 
@@ -98,11 +100,12 @@ double PID::TotalError() {
   // Calculate the control signal
   
   double Kp_sched; // Use gain scheduling
-  if (fabs(p_error) > 1.5) {
+  if (fabs(p_error) > 2.0) {
     Kp_sched = Kp;
   } else {
-    Kp_sched = Kp*(p_error+0.5)/1.0;
+    Kp_sched = Kp*(p_error)/2.0;
   }
+
   double p_term = -Kp_sched*p_error;
   
   double i_term = -Ki*i_error;
@@ -113,7 +116,15 @@ double PID::TotalError() {
   } else {
     Kd_sched = Kd*(d_error+0.2)/0.12;
   }
-  double d_term = -Kd*d_error;
+  
+  double d_term = -Kd_sched*d_error;
+  if (fabs(d_term) > 1.0 ){
+    if (d_term < 0.0) {
+      d_term = -1.0;
+    } else {
+      d_term = 1.0;
+    }
+  }
   
   // Signs are flipped due to steering angle definition
   double control = p_term + i_term + d_term;
@@ -129,9 +140,9 @@ void PID::Reset() {
 }
 
 void PID::PrintPID() {
-  std::cout << "Kp: " << Kp << ", ";
-  std::cout << "Ki: " << Ki << ", ";
-  std::cout << "Kp: " << Kd << std::endl;
+  std::cout << "Pterm: " << (-Kp*p_error) << ", ";
+  std::cout << "Iterm: " << (-Ki*i_error) << ", ";
+  std::cout << "Dterm: " << (-Kd*d_error) <<std::endl;
 
 }
 

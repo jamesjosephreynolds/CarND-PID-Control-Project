@@ -39,7 +39,7 @@ int main()
    */
   PID pid;
   PID pid_sp;
-  pid.Init(0.2, 0.0005, 0.5, true);     // Twiddle the steering controller
+  pid.Init(0.15, 0.00001, 0.03, false);     // Twiddle the steering controller
   pid_sp.Init(0.1, 0.0001, 0.0, false); // do not Twiddle the speed controller
   
   h.onMessage([&pid, &pid_sp](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
@@ -69,6 +69,8 @@ int main()
             steer_value = -1.0f;
           }
           
+          pid.PrintPID();
+          
           // Use CTE and angle to calculate the target speed
           double cte_lim = 1.5;
           double steer_lim = 0.5;
@@ -82,15 +84,15 @@ int main()
           } else {
             // Target speed is a linearly decreasing function of CTE absolute value
             // As CTE increases, the target speed decreases
-            tgt_spd = 30*fabs((fabs(cte) - cte_lim)) + 10;
+            tgt_spd = 20*fabs((fabs(cte) - cte_lim)) + 10;
           }
           
           // Use pid_sp to calculate the throttle value
           pid_sp.UpdateError(-(tgt_spd-speed));
           double feedforward = tgt_spd/10; // Feedforward throttle term
           double throttle_value = feedforward + pid_sp.TotalError();
-          if (throttle_value > 0.5f) {
-            throttle_value = 0.5f;
+          if (throttle_value > 0.3f) {
+            throttle_value = 0.3f;
           } else if (throttle_value < -0.2f) {
             // Inhibit excessive braking
             throttle_value = -0.2f;
