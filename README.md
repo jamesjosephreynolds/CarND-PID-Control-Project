@@ -148,8 +148,8 @@ if (speed < 2){
 ```
 
 ## Performance
-The video below shows my solution in action.
-
+This [video](https://youtu.be/oZKl0-CHfHc) shows my solution in action.
+ 
 ## Reflections
 My initial approach was to implement the Nelder Mead algorithm for parameter optimization.  This is a technique I've used successfully for other applications.  However, when I implemented this in object-oriented manner, I struggled to root out some segmentation faults.  This was likely due to my implementation and an associated array of structures, but I was unable to solve it.  Nelder-Mead does not lend itself well to functional-style code, so I abandoned this approach and instead implemented Twiddle.
 
