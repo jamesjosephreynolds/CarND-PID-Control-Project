@@ -119,3 +119,28 @@ double d_term = -Kd*d_error;
 // Signs are flipped due to steering angle definition
 double control = p_term + i_term + d_term;
 ```
+
+### Parameter Tuning
+For the parameter tuning I used a mixture of approaches.  For the PID controller responsible for the vehicle speed, I manually tuned the P and I gains very crudely.  The target speed isn't a critical parameter, it's merely important that the vehicle slow down when turning.
+
+For the PID controller responsible for the steering angle, I started by manually tuning the parameters such that the car could traverse the whole track without going off the road.
+
+Then, I used the method `PID.Twiddle()` to search for the best possible parameters.  For the cost function that the Twiddle algorithm used to compare runs, I did the following:
+1. If the car stops, make cost exceedingly high and fixed value
+2. If the car goes off the road, make cost accumulate very quickly
+3. Otherwise, value both a small error `cte` and a small steering `angle`
+
+In this way, the cost not only emphasizes keeping the car near the center line, but also discourages it from simply swerving madly around the center of the lane.
+
+```C++
+if (speed < 2){
+  cost = 2000000;
+} else if (cost < 2000000) {
+  if (fabs(cte) > 2.5) {
+    cost += 150;
+  } else if (fabs(cte) > 0.1) { // no cost if CTE < 0.1
+    cost += pow((10*cte),4)/pow(10,4) + pow((angle),4)/pow(10,4); // scale up by 10 so small CTE has smaller cost
+  }
+}
+```
+
