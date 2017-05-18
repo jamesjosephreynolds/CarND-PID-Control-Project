@@ -20,7 +20,9 @@ if (steer_value > 1.0f) {
 }
 ```
 
-For the vehicle speed controller, the setpoint is more complicated.  The general idea is that the target speed decreases as the cross-track error increases.  So, as the vehicle deviates from the center of the lane, the car should slow down.
+For the vehicle speed controller, the setpoint was originally more complicated (shown below).  The general idea was that the target speed decreases as the cross-track error increases.  So, as the vehicle deviates from the center of the lane, the car should slow down.
+
+After submission, the reviewer suggested a fixed speed for better stability, which is what I've now implemented `tgt_spd = 15.0`.
 ```C++
 // Use CTE and angle to calculate the target speed
 double cte_lim = 1.5;
@@ -43,18 +45,11 @@ The error, then, is the difference between the target speed and the actual vehic
 ```C++
 // Use pid_sp to calculate the throttle value
 pid_sp.UpdateError(-(tgt_spd-speed));
-double feedforward = tgt_spd/10; // Feedforward throttle term
-double throttle_value = feedforward + pid_sp.TotalError();
-if (throttle_value > 0.5f) {
-  throttle_value = 0.5f;
-} else if (throttle_value < -0.2f) {
-  // Inhibit excessive braking
-  throttle_value = -0.2f;
-}
+double throttle_value = pid_sp.TotalError();
 ```
 
 ### Controller Modifications
-In order to alleviate heavy oscillations very near the center of the lane, I implemented a few modifications to the base PID scheme.
+In order to alleviate heavy oscillations very near the center of the lane, I originally implemented a few modifications to the base PID scheme.  These have all been removed in this submission, but I leave them here for the sake of history.
 
 First, I added a deadzone for the P term error.  This way, the control signal drops out within some band around `cte = 0.0`.
 ```C++
