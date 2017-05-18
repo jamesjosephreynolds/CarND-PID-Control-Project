@@ -3,28 +3,28 @@
 #include <math.h>
 using namespace std;
 
-/*
-* TODO: Complete the PID class.
-*/
-
 PID::PID() {}
 
 PID::~PID() {}
 
 void PID::Init(double Kp_in, double Ki_in, double Kd_in, bool twiddle_in) {
   // Take gains as init arguments
+  
+  // Kp should never be zero or negative
   if (Kp_in > 0.0) {
     Kp = Kp_in;
   } else {
     Kp = 0.000001;
   }
   
+  // Ki should never be negative
   if (Ki_in > 0.0) {
     Ki = Ki_in;
   } else {
     Ki = 0.0;
   }
   
+  // Kd should never be negative
   if (Kd_in > 0.0) {
     Kd = Kd_in;
   } else {
@@ -64,7 +64,7 @@ void PID::UpdateError(double cte) {
   // Integral
   i_error += cte;
   
-  // Anti-windup
+  // Anti-windup for integral too large
   double i_term_max = 0.1;
   if (N > N_min) {
     if ((Ki*i_error) > i_term_max) {
@@ -78,24 +78,24 @@ void PID::UpdateError(double cte) {
   
   // Derivative (assume t = 1 sec)
   double d_error_old = d_error;
+  
+  // Low pass filter for derivative smoothing
+  // y(t) = k*y(t-1) + (1-k)*x(t)
   d_error = 0.2*d_error + 0.8*(cte - d_error_old);
   
 }
 
 double PID::TotalError() {
-  // Calculate the control signal?
+  // Calculate the control signal
+  // Signs are flipped due to steering angle definition
   double control;
   double p_term = -Kp*p_error;
   double i_term = -Ki*i_error;
   double d_term = -Kd*d_error;
   
   control = p_term + i_term + d_term;
-  /*
-  cout << "P: " << p_term << "\n";
-  cout << "I: " << i_term << "\n";
-  cout << "D: " << d_term << "\n";
-  */
-   return control;
+
+  return control;
 }
 
 void PID::Reset() {
@@ -115,20 +115,23 @@ void PID::PrintPID() {
 bool PID::Twiddle(const double cte, const double speed, const double angle) {
   
   // Check if twiddle has converged
-  double d_sum = (dp/DP_INIT + di/DI_INIT + dd/DD_INIT);
-  if (d_sum < 0.3 ) {
+  double d_sum = (dp/DP_INIT + di/DI_INIT + dd/DD_INIT); // Ratio of initial step to current step
+  if (d_sum < 0.3 ) { // Threshold for convergence
     is_twiddled = true;
     std::cout << "Twiddle - Kp: " << Kp << ", Ki: " << Ki << ", Kd: " << Kd << std::endl;
   }
   
+  // The rest of this method is skipped if Twiddle was either initially disabled
+  // or has converged based on the criteria above
   if (!is_twiddled) {
   
-    if (N < N_min) {
-      // wait for more data
+    if (N < N_min) { // Not enough data, driving has not stabilized
+      // Increment data counter
       ++N;
       
-      return false;
-    } else if (N < N_max) {
+      return false; // Reset not needed
+      
+    } else if (N < N_max) { // Not enough data, driving has stabilized
 
       //std::cout << "Twiddle - Pt: " << N << std::endl;
       
@@ -144,22 +147,24 @@ bool PID::Twiddle(const double cte, const double speed, const double angle) {
           cost += pow((10*cte),4)/pow(10,4) + pow((angle),4)/pow(10,4); // scale up by 10 so small CTE has smaller cost
         }
       }
+      // Increment data counter
       ++N;
       
-      return false;
-    } else {
+      return false; // Reset not needed
       
-      // initialize best_cost
-      if (best_cost < 0) {
+    } else { // Enough data has been collected to twiddle
+      
+      // Initialize best_cost first time through
+      if (best_cost < 0) { // best_cost = -1 first time
         best_cost = cost;
       }
       
       std::cout << "Twiddle - Cost: " << cost << std::endl;
       
-      
-          switch (lidx) {
-            case BASELINE: {
+          switch (lidx) { // lidx indicates which twiddle step is currently happening
+            case BASELINE: { // Twiddle has never been run
               
+              // Increment the correct parameter based on pidx
               if (pidx == KP) {
                 Kp += dp;
                 std::cout << "Twiddle - Kp: " << Kp << std::endl;
@@ -171,17 +176,19 @@ bool PID::Twiddle(const double cte, const double speed, const double angle) {
                 std::cout << "Twiddle - Kd: " << Kd << std::endl;
               }
                 
+              // Next time through we will evaluate the increment performance
               lidx = EVAL_INC;
               
               break;
+              
             } // case BASELINE:
               
-            case EVAL_INC: {
+            case EVAL_INC: { // On the previous run, a parameter had been incremented
               
-              if (cost < best_cost) {
-                
+              if (cost < best_cost) { // Best run so far
                 best_cost = cost;
                 
+                // Make the delta step bigger as last increment was successful
                 if (pidx == KP) {
                   dp *= 1.1;
                   pidx = KI; // move to Ki
@@ -202,9 +209,12 @@ bool PID::Twiddle(const double cte, const double speed, const double angle) {
                   std::cout << "Twiddle - Kp: " << Kp << std::endl;
                 }
 
+                // Keep lidx = EVAL_INC next time through, as we have just had a first-time
+                // increment success, and have moved to the next parameter, incremented above
                 
               } else {
                 
+                // Increment was not better, try decrement
                 if (pidx == KP) {
                   Kp -= 2*dp;
                   std::cout << "Twiddle - Kp: " << Kp << std::endl;
@@ -216,6 +226,7 @@ bool PID::Twiddle(const double cte, const double speed, const double angle) {
                   std::cout << "Twiddle - Kd: " << Kd << std::endl;
                 }
                 
+                // Next time through, evaluate decrement
                 lidx = EVAL_DEC;
                 
               }
@@ -223,12 +234,12 @@ bool PID::Twiddle(const double cte, const double speed, const double angle) {
               break;
             } // case EVAL_INC:
               
-            case EVAL_DEC: {
+            case EVAL_DEC: { // On the previous run, a parameter had been decremented
               
-              if (cost < best_cost) {
-                
+              if (cost < best_cost) { // Best run so far
                 best_cost = cost;
                 
+                // Make the delta step bigger as last decrement was successful
                 if (pidx == KP) {
                   dp *= 1.05;
                   pidx = KI; // move to Ki
@@ -250,10 +261,12 @@ bool PID::Twiddle(const double cte, const double speed, const double angle) {
                 }
                 
                 
-              } else {
+              } else { // No improvement from twiddling this parameter
                 
-                if (pidx == KP) {
-                  Kp += dp; // no improvement, restore original value
+                // Restore the previous value, decrease decrement and
+                // twiddle the next parameter
+                if (pidx == KP) { 
+                  Kp += dp; 
                   dp *= 0.95;  // shrink search step
                   pidx = KI;
                   std::cout << "Twiddle - dp: " << dp << std::endl;
@@ -279,6 +292,7 @@ bool PID::Twiddle(const double cte, const double speed, const double angle) {
                 }
               }
               
+              // Next time through, evaluate increment
               lidx = EVAL_INC;
               
               
@@ -298,7 +312,7 @@ bool PID::Twiddle(const double cte, const double speed, const double angle) {
       N = 0;
       cost = 0;
       
-      return true; // reset simulator
+      return true; // Reset simulator
     }
 
   } else {
