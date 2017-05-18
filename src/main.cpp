@@ -39,7 +39,7 @@ int main()
    */
   PID pid;
   PID pid_sp;
-  pid.Init(0.081, 0.0005, 2, true);     // Twiddle the steering controller
+  pid.Init(0.2, 0.0005, 0.5, true);     // Twiddle the steering controller
   pid_sp.Init(0.1, 0.0001, 0.0, false); // do not Twiddle the speed controller
   
   h.onMessage([&pid, &pid_sp](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
@@ -91,9 +91,9 @@ int main()
           double throttle_value = feedforward + pid_sp.TotalError();
           if (throttle_value > 0.5f) {
             throttle_value = 0.5f;
-          } else if (steer_value < -0.0f) {
+          } else if (steer_value < -0.2f) {
             // Inhibit excessive braking
-            throttle_value = -0.0f;
+            throttle_value = -0.2f;
           }
 
           json msgJson;

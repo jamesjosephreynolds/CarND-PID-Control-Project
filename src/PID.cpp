@@ -61,6 +61,15 @@ void PID::UpdateError(double cte) {
   // Proportional
   p_error = cte;
   
+  // Smooth deadzone near centerline
+  if (fabs(p_error) < 0.1) {
+    p_error = 0.0;
+  } else if (p_error < 0.0) {
+    p_error += 0.1;
+  } else {
+    p_error -= 0.1;
+  }
+  
   // Integral
   i_error += cte;
   
@@ -87,13 +96,27 @@ void PID::UpdateError(double cte) {
 
 double PID::TotalError() {
   // Calculate the control signal
-  // Signs are flipped due to steering angle definition
-  double control;
-  double p_term = -Kp*p_error;
+  
+  double Kp_sched; // Use gain scheduling
+  if (fabs(p_error) > 1.5) {
+    Kp_sched = Kp;
+  } else {
+    Kp_sched = Kp*(p_error+0.5)/1.0;
+  }
+  double p_term = -Kp_sched*p_error;
+  
   double i_term = -Ki*i_error;
+  
+  double Kd_sched; // Use gain scheduling
+  if (fabs(d_error) > 0.12) {
+    Kd_sched = Kd;
+  } else {
+    Kd_sched = Kd*(d_error+0.2)/0.12;
+  }
   double d_term = -Kd*d_error;
   
-  control = p_term + i_term + d_term;
+  // Signs are flipped due to steering angle definition
+  double control = p_term + i_term + d_term;
 
   return control;
 }
