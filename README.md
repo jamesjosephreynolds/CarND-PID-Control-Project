@@ -49,3 +49,73 @@ if (throttle_value > 0.5f) {
   throttle_value = -0.2f;
 }
 ```
+
+### Controller Modifications
+In order to alleviate heavy oscillations very near the center of the lane, I implemented a few modifications to the base PID scheme.
+
+First, I added a deadzone for the P term error.  This way, the control signal drops out within some band around `cte = 0.0`.
+```C++
+// Proportional
+p_error = cte;
+  
+// Smooth deadzone near centerline
+if (fabs(p_error) < 0.1) {
+  p_error = 0.0;
+} else if (p_error < 0.0) {
+  p_error += 0.1;
+} else {
+  p_error -= 0.1;
+}
+```
+
+Next, I added an anti-windup for the I term error.  This prevents the integrator from continuing to get bigger, when the I term has reached a practical limit.
+
+```C++
+// Integral
+i_error += cte;
+  
+// Anti-windup for integral too large
+double i_term_max = 0.1;
+if (N > N_min) {
+  if ((Ki*i_error) > i_term_max) {
+    i_error = i_term_max / Ki;
+  } else if ((Ki*i_error) < -i_term_max) {
+    i_error = -i_term_max / Ki;
+  }
+} else {
+  i_error = 0.0;
+}
+```
+
+Third, I added a crude low-pass filter to the calculated derivative of `cte` in order to smooth the D term.
+
+```C++
+// Low pass filter for derivative smoothing
+// y(t) = k*y(t-1) + (1-k)*x(t)
+d_error = 0.2*d_error + 0.8*(cte - d_error_old);
+```
+
+Lastly, for the P term and the D term I included gain scheduling.  This has the effect of increasing the `Kp` and `Kd` gains as `cte` and the derivative of `cte`, respectively, get bigger.  Similar to the deadzone above, the goal is the not create a large steering angle when the car is very near the target.
+
+```C++
+double Kp_sched; // Use gain scheduling
+if (fabs(p_error) > 1.5) {
+  Kp_sched = Kp;
+} else {
+  Kp_sched = Kp*(p_error+0.5)/1.0;
+}
+double p_term = -Kp_sched*p_error;
+
+double i_term = -Ki*i_error;
+ 
+double Kd_sched; // Use gain scheduling
+if (fabs(d_error) > 0.12) {
+  Kd_sched = Kd;
+} else {
+  Kd_sched = Kd*(d_error+0.2)/0.12;
+}
+double d_term = -Kd*d_error;
+  
+// Signs are flipped due to steering angle definition
+double control = p_term + i_term + d_term;
+```
