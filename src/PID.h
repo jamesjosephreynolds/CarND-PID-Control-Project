@@ -91,7 +91,7 @@ public:
   /*
    * Perform twiddle routine
    */
-  bool Twiddle(const double cte, const double speed);
+  bool Twiddle(const double cte, const double speed, const double angle);
   
 };
 

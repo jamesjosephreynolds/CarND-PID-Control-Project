@@ -34,14 +34,14 @@ int main()
 
   PID pid;
   PID pid_sp;
-  pid.Init(0.5, 0.00005, 0.0005, true); //(0.25, 0.00005, 0.0005, false)
+  pid.Init(0.081, 0.0005, 2, true); //(0.081, 0.0005, 26.518, false)
   pid_sp.Init(0.1, 0.0001, 0.0, false);
   
   h.onMessage([&pid, &pid_sp](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
-    
+    //std::cout << data << std::endl;
     if (length && length > 2 && data[0] == '4' && data[1] == '2')
     {
       auto s = hasData(std::string(data).substr(0, length));
@@ -77,15 +77,15 @@ int main()
           } else if (fabs(steer_value) > steer_lim) {
             tgt_spd = 10;
           } else {
-            tgt_spd = 50*fabs((fabs(cte)-cte_lim))+10;
+            tgt_spd = 30*fabs((fabs(cte)-cte_lim))+10;
           }
           pid_sp.UpdateError(-(tgt_spd-speed));
           double feedforward = tgt_spd/10;
           double throttle_value = pid_sp.TotalError();
-          if (throttle_value > 1.0f) {
-            throttle_value = 1.0f;
-          } else if (steer_value < -1.0f) {
-            throttle_value = -1.0f;
+          if (throttle_value > 0.5f) {
+            throttle_value = 0.5f;
+          } else if (steer_value < -0.0f) {
+            throttle_value = -0.0f;
           }
 
           json msgJson;
@@ -95,7 +95,7 @@ int main()
           //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
           
-          bool reset = pid.Twiddle(cte, speed);
+          bool reset = pid.Twiddle(cte, speed, angle);
           
           if (reset) {
             // restart simulator

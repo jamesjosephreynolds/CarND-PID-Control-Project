@@ -44,9 +44,9 @@ void PID::Init(double Kp_in, double Ki_in, double Kd_in, bool twiddle_in) {
   N_max = 5300;
   N_min = 300;
   best_cost = -1;
-  DP_INIT = Kp/10;
-  DI_INIT = Ki/10;
-  DD_INIT = Kd/10;
+  DP_INIT = Kp/5;
+  DI_INIT = Ki/5;
+  DD_INIT = Kd/5;
   dp = DP_INIT;
   di = DI_INIT;
   dd = DD_INIT;
@@ -78,7 +78,7 @@ void PID::UpdateError(double cte) {
   
   // Derivative (assume t = 1 sec)
   double d_error_old = d_error;
-  d_error = cte - d_error_old;
+  d_error = 0.2*d_error + 0.8*(cte - d_error_old);
   
 }
 
@@ -112,7 +112,7 @@ void PID::PrintPID() {
 
 }
 
-bool PID::Twiddle(const double cte, const double speed) {
+bool PID::Twiddle(const double cte, const double speed, const double angle) {
   
   // Check if twiddle has converged
   double d_sum = (dp/DP_INIT + di/DI_INIT + dd/DD_INIT);
@@ -134,13 +134,14 @@ bool PID::Twiddle(const double cte, const double speed) {
       
       // Update data for current run
       // Punish very large CTE or stopped vehicle
+      // Punish non-straight driving to avoid oscillations
       if (speed < 2){
         cost = 2000000;
       } else if (cost < 2000000) {
         if (fabs(cte) > 2.5) {
           cost += 150;
         } else if (fabs(cte) > 0.1) { // no cost if CTE < 0.1
-          cost += pow((10*cte),4)/pow(10,4); // scale up by 10 so small CTE has smaller cost
+          cost += pow((10*cte),4)/pow(10,4) + pow((angle),4)/pow(10,4); // scale up by 10 so small CTE has smaller cost
         }
       }
       ++N;
